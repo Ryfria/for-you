@@ -3,58 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mobile Fix - No Overlap</title>
+    <title>For You - Top Position Fix</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         
-        /* CANVAS FULL SCREEN */
         #canvas-container { width: 100vw; height: 100vh; display: block; position: fixed; top: 0; left: 0; z-index: 1; }
 
-        /* --- UI PANEL (DI BAWAH - 40% TINGGI LAYAR) --- */
+        /* UI PANEL LEBIH PENDEK (Hanya 35% layar) */
         #ui-panel {
             position: absolute; 
-            bottom: 0; /* NEMPEL BAWAH */
+            bottom: 0; 
             left: 0; 
             width: 100%;
-            height: 40vh; /* TINGGI TETAP 40% */
-            background: linear-gradient(to top, #000 20%, rgba(10,10,20,0.95) 100%);
-            padding: 10px 20px; 
+            height: 35vh; /* Dikecilkan biar area teks makin luas */
+            background: rgba(10, 10, 10, 0.9); /* Sedikit transparan */
+            backdrop-filter: blur(10px); /* Efek kaca */
+            padding: 15px; 
             border-top: 2px solid #00d2ff;
             color: #fff; z-index: 10; 
             box-sizing: border-box;
             border-radius: 20px 20px 0 0;
             display: flex; flex-direction: column;
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
         }
 
         #webcam-preview { 
-            position: absolute; top: 10px; right: 10px; width: 60px; opacity: 0.4; 
-            border: 1px solid #333; z-index: 5; border-radius: 5px; transform: scaleX(-1);
+            position: absolute; top: 15px; right: 15px; width: 60px; opacity: 0.5; 
+            border: 1px solid #333; z-index: 20; border-radius: 6px; transform: scaleX(-1);
         } 
 
-        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px; }
         .status-text { font-size: 14px; font-weight: bold; color: #ff3333; }
         .status-text.ok { color: #00ffaa; }
 
         .guide-container { 
-            display: grid; grid-template-columns: 1fr; gap: 6px; 
+            display: grid; grid-template-columns: 1fr; gap: 8px; 
             overflow-y: auto; flex-grow: 1; 
         }
 
         .guide-item {
-            background: rgba(255,255,255,0.08); padding: 10px 15px; border-radius: 12px; 
+            background: rgba(255,255,255,0.08); padding: 8px 15px; border-radius: 8px; 
             color: #ccc; font-size: 14px; font-weight: 600; 
-            display: flex; align-items: center; gap: 12px;
+            display: flex; align-items: center; gap: 10px;
         }
         .guide-item span { font-size: 20px; }
-        .guide-item.active { background: #00d2ff; color: #000; transform: scale(1.01); box-shadow: 0 0 10px rgba(0,210,255,0.4); }
-        .guide-item.heart-mode.active { background: #ff0055; color: white; box-shadow: 0 0 10px #ff0055; }
-
-        /* LOADING DI TENGAH AREA ATAS (Bukan tengah layar) */
+        .guide-item.active { background: #00d2ff; color: #000; transform: scale(1.02); }
+        
         #loading {
-            position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
-            color: #fff; font-size: 14px; text-align: center; width: 80%; z-index: 20;
-            background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; border: 1px solid #444;
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            color: #fff; font-size: 14px; text-align: center; width: 80%; z-index: 5;
+            text-shadow: 0 0 10px #000;
         }
     </style>
     
@@ -68,76 +65,62 @@
 
     <div id="ui-panel">
         <div class="status-header">
-            <div style="font-size:11px; color:#888;">SENSOR STATUS</div>
+            <div style="font-size:10px; color:#888;">STATUS</div>
             <div class="status-text" id="cam-status">CARI TANGAN...</div>
         </div>
         <div class="guide-container">
-            <div class="guide-item" id="g-1"><span>☝️</span> 1: Hai</div>
-            <div class="guide-item" id="g-2"><span>✌️</span> 2: Cantik</div>
-            <div class="guide-item" id="g-3"><span>🤟</span> 3: Thanks</div>
-            <div class="guide-item" id="g-4"><span>🖖</span> 4: Doa</div>
-            <div class="guide-item heart-mode" id="g-5"><span>✋</span> 5: LOVE</div>
+            <div class="guide-item" id="g-1"><span>☝️</span> 1 Jari</div>
+            <div class="guide-item" id="g-2"><span>✌️</span> 2 Jari</div>
+            <div class="guide-item" id="g-3"><span>🤟</span> 3 Jari</div>
+            <div class="guide-item" id="g-4"><span>🖖</span> 4 Jari</div>
+            <div class="guide-item" id="g-5"><span>✋</span> 5 Jari (Love)</div>
         </div>
     </div>
 
-    <div id="loading">
-        <b>MEMUAT...</b><br>Pastikan cahaya terang & HP Posisi Berdiri.
-    </div>
+    <div id="loading"><b>MEMUAT...</b><br>Gunakan Mode Portrait</div>
 
     <div id="canvas-container"></div>
     <canvas id="textCanvas" width="800" height="800" style="display:none;"></canvas>
 
 <script>
-    const isMobile = true; 
-    
-    // --- OPTIMASI MOBILE ---
-    const PARTICLE_COUNT = 6500; // Ringan & Cepat
-    const STABILITY_THRESHOLD = 5;
+    // --- SETTINGAN FIXED ---
+    const PARTICLE_COUNT = 6000; 
     
     let particles, geometry, material;
     let positions, targetPositions, colorsArray;
     let cacheIdle = [], cache1 = [], cache2 = [], cache3 = [], cache4 = [];
     let currentShapeType = 'idle';
-    let physicsScale = 1.0;
     let lastDetectedShape = '';
     const tempColor = new THREE.Color();
 
-    // --- THREE.JS ---
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.02);
+    // Fog dikurangi biar teks di atas tetap terang
+    scene.fog = new THREE.FogExp2(0x000000, 0.015); 
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    
-    function adjustCamera() {
-        // --- LOGIKA POSISI BARU ---
-        // UI ada di 40% bawah. Teks harus di 60% atas.
-        // Kita turunkan kamera (Y negatif), supaya objek terlihat NAIK ke atas.
-        camera.position.z = 90; // Zoom out dikit biar teks panjang muat
-        camera.position.y = -35; // KAMERA TURUN -> OBJEK NAIK (Bebas dari UI)
-        camera.updateProjectionMatrix();
-    }
-    adjustCamera();
+    camera.position.z = 100; // Kamera mundur
+    camera.position.y = 0;   // Kamera sejajar mata (Teks nanti kita angkat manual)
 
     const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(1); 
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // --- GENERATE TEXT (Ukuran Font Dinamis) ---
+    // --- GENERATOR TEKS (DENGAN POSISI Y+ YANG TINGGI) ---
     function generateTextPoints(text) {
         const c = document.getElementById('textCanvas');
         const ctx = c.getContext('2d');
         ctx.clearRect(0,0,c.width,c.height);
         
-        // Ukuran font disesuaikan biar gak kepotong di HP kecil
-        const fontSize = 60; 
+        // Font size dikecilkan sedikit biar aman
+        const fontSize = 55; 
         
         ctx.fillStyle = '#ffffff'; 
         ctx.font = `900 ${fontSize}px Arial, sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         
         const lines = text.split('\n');
-        const lineHeight = fontSize * 1.2;
+        const lineHeight = fontSize * 1.3;
         const startY = (c.height - ((lines.length - 1) * lineHeight)) / 2;
 
         lines.forEach((line, index) => {
@@ -150,11 +133,11 @@
         for(let y=0; y<c.height; y+=step) {
             for(let x=0; x<c.width; x+=step) {
                 if(data[(y*c.width+x)*4] > 128) {
-                    // PENTING: Posisi Y text dinormalkan ke 0 (Tengah Canvas)
-                    // Nanti posisi "naik" diatur oleh Kamera.
+                    // DISINI KUNCINYA: +35 di sumbu Y
+                    // Ini memaksa teks naik ke atas layar, menjauhi menu bawah
                     pts.push({ 
                         x: (x - c.width/2) * 0.18, 
-                        y: ((c.height-y) - c.height/2) * 0.18, 
+                        y: ((c.height-y) - c.height/2) * 0.18 + 35, 
                         z: 0 
                     });
                 }
@@ -164,7 +147,6 @@
     }
 
     function initParticles() {
-        // Text lebih pendek/singkat agar muat
         cacheIdle = generateTextPoints("Pesan\nUntukmu 🤍");
         cache1 = generateTextPoints("Hai\nCantik! 🌸");
         cache2 = generateTextPoints("Kamu\nKeren ✨");
@@ -178,14 +160,14 @@
 
         for(let i=0; i<PARTICLE_COUNT*3; i++) {
             positions[i] = (Math.random()-0.5) * 100;
-            targetPositions[i] = positions[i];
+            targetPositions[i] = positions[i]; // Start tersebar
         }
 
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
 
         material = new THREE.PointsMaterial({
-            size: 0.9, // Partikel besar biar jelas di HP
+            size: 0.9, 
             vertexColors: true, transparent: true, opacity: 1.0, 
             blending: THREE.AdditiveBlending, depthWrite: false
         });
@@ -195,7 +177,6 @@
         calculateShape('idle');
     }
 
-    // --- LOGIKA WARNA PELANGI ---
     function calculateShape(type) {
         currentShapeType = type;
         document.querySelectorAll('.guide-item').forEach(el => el.classList.remove('active'));
@@ -214,23 +195,26 @@
             if (type === 'idle') {
                 pt = cacheIdle[i % cacheIdle.length];
                 x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5)*5;
-                hue = (x/60) + 0.5; // Biru-Cyan
+                hue = 0.6; // Biru statis untuk idle
             } 
             else if (type.startsWith('msg')) {
                 let cache = type === 'msg1'?cache1 : type==='msg2'?cache2 : type==='msg3'?cache3 : cache4;
                 pt = cache[i % cache.length];
                 x = pt.x; y = pt.y; z = pt.z;
-                // WARNA PELANGI BERDASARKAN X
-                hue = (x/70) + 0.5; 
+                // Pelangi
+                hue = (x/80) + 0.5; 
             } 
             else if (type === 'heart') {
                 const t = Math.random() * Math.PI * 2;
                 let hx = 16 * Math.pow(Math.sin(t), 3);
                 let hy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-                x = hx * 1.2; y = (hy * 1.2) + 10; // Hati dinaikkan sedikit
+                
+                x = hx * 1.2; 
+                y = (hy * 1.2) + 40; // HATI JUGA DIPAKSA NAIK (+40)
                 z = (Math.random()-0.5)*5;
-                hue = 0.98; // Merah
-            } else { x=0;y=0;z=0;hue=0; }
+                hue = 0.0; // Merah
+            } 
+            else { x=0;y=100;z=0;hue=0; } // Default lempar ke atas
 
             targetPositions[i3] = x;
             targetPositions[i3+1] = y;
@@ -246,14 +230,9 @@
 
     function animate() {
         requestAnimationFrame(animate);
-        const lerpSpeed = 0.12;
-
         const pos = geometry.attributes.position.array;
-        for(let i=0; i<PARTICLE_COUNT; i++) {
-            const i3 = i*3;
-            pos[i3] += (targetPositions[i3] * physicsScale - pos[i3]) * lerpSpeed;
-            pos[i3+1] += (targetPositions[i3+1] * physicsScale - pos[i3+1]) * lerpSpeed;
-            pos[i3+2] += (targetPositions[i3+2] * physicsScale - pos[i3+2]) * lerpSpeed;
+        for(let i=0; i<PARTICLE_COUNT*3; i++) {
+            pos[i] += (targetPositions[i] - pos[i]) * 0.1;
         }
         geometry.attributes.position.needsUpdate = true;
         renderer.render(scene, camera);
@@ -265,15 +244,14 @@
         
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
             const lm = results.multiHandLandmarks[0];
+            const isUp = (t, b) => lm[t].y < lm[b].y;
             
-            // Logic Jari Sederhana
-            const isFingerUp = (tip, base) => lm[tip].y < lm[base].y;
             let count = 0;
-            if(isFingerUp(8,6)) count++;
-            if(isFingerUp(12,10)) count++;
-            if(isFingerUp(16,14)) count++;
-            if(isFingerUp(20,18)) count++;
-            if(lm[4].x < lm[2].x) count++; // Jempol (asumsi tangan kanan/mirror)
+            if(isUp(8,6)) count++;
+            if(isUp(12,10)) count++;
+            if(isUp(16,14)) count++;
+            if(isUp(20,18)) count++;
+            if(lm[4].x < lm[3].x) count++; // Jempol simpel
 
             if(count > 5) count = 5;
 
@@ -283,10 +261,10 @@
 
             let shape = 'idle';
             if(count===1) shape='msg1';
-            if(count===2) shape='msg2';
-            if(count===3) shape='msg3';
-            if(count===4) shape='msg4';
-            if(count===5) shape='heart';
+            else if(count===2) shape='msg2';
+            else if(count===3) shape='msg3';
+            else if(count===4) shape='msg4';
+            else if(count===5) shape='heart';
 
             if(shape !== lastDetectedShape) {
                 lastDetectedShape = shape;
@@ -295,10 +273,6 @@
         } else {
             document.getElementById('cam-status').innerText = "CARI TANGAN...";
             document.getElementById('cam-status').classList.remove('ok');
-            if(lastDetectedShape !== 'idle') {
-                lastDetectedShape = 'idle';
-                calculateShape('idle');
-            }
         }
     }
 
@@ -320,7 +294,6 @@
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-        adjustCamera();
     });
 </script>
 </body>
