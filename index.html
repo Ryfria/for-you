@@ -3,79 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>For You (Ultra Mobile)</title>
+    <title>Special Message (No Cam UI)</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; touch-action: none; }
-        #canvas-container { width: 100vw; height: 100vh; display: block; position: fixed; top: 0; left: 0; z-index: 1; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
 
-        /* --- UI PANEL SUPER BESAR --- */
+        /* --- UI PANEL UTAMA (DIBUAT BESAR & KONTRAS) --- */
         #ui-panel {
             position: absolute; bottom: 0; left: 0; width: 100%;
-            height: 45vh; /* Mengambil hampir setengah layar bawah */
-            background: linear-gradient(to top, #000 20%, rgba(10,10,20,0.95) 100%);
-            padding: 15px 20px; 
-            border-top: 3px solid #00d2ff;
+            background: linear-gradient(to top, #000 0%, rgba(10,10,20,0.95) 100%);
+            padding: 20px 20px 40px 20px; 
+            border-top: 2px solid #00d2ff; /* Garis Neon Biru di atas */
             color: #fff; z-index: 10; 
             box-sizing: border-box;
-            border-radius: 25px 25px 0 0;
-            display: flex; flex-direction: column;
-            box-shadow: 0 -10px 60px rgba(0, 210, 255, 0.3);
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -10px 50px rgba(0, 210, 255, 0.2);
         }
 
-        /* Video tetap disembunyikan (Blind Mode) */
+        /* Video disembunyikan total (tapi tetap ada di memori) */
         #webcam-preview { display: none; } 
 
-        .status-header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333; 
-        }
-        .status-text { 
-            font-size: 18px; font-weight: bold; color: #ff3333; 
-            text-transform: uppercase; letter-spacing: 1px;
-        }
-        .status-text.ok { color: #00ffaa; text-shadow: 0 0 10px #00ffaa; }
+        /* Header Status */
+        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .main-title { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .status-text { font-size: 16px; font-weight: bold; color: #ff3333; animation: pulse 1s infinite; }
+        .status-text.ok { color: #00ffaa; animation: none; }
 
-        /* --- GRID TOMBOL (1 KOLOM BIAR GEDE) --- */
+        /* --- GRID TOMBOL INSTRUKSI (BESAR) --- */
         .guide-container {
             display: grid; 
-            grid-template-columns: 1fr; /* 1 Kolom Full Width */
-            gap: 8px; 
-            overflow-y: auto; /* Bisa scroll kalau layar kependekan */
-            flex-grow: 1;
+            grid-template-columns: 1fr 1fr; /* 2 Kolom */
+            gap: 10px; 
+            margin-top: 10px;
         }
 
         .guide-item {
-            background: rgba(255,255,255,0.08); 
+            background: rgba(255,255,255,0.05); 
             border: 1px solid rgba(255,255,255,0.1);
-            padding: 12px 20px; /* Padding Besar */
-            border-radius: 15px; 
-            color: #ccc;
-            font-size: 18px; /* Teks Besar */
-            font-weight: 700;
-            display: flex; align-items: center; justify-content: flex-start; gap: 15px;
-            transition: all 0.1s ease;
+            padding: 15px; 
+            border-radius: 12px; 
+            color: #aaa;
+            font-size: 14px; 
+            font-weight: 600;
+            display: flex; align-items: center; justify-content: flex-start; gap: 10px;
+            transition: all 0.2s ease;
         }
 
-        .guide-item span { font-size: 28px; } /* Emoji Raksasa */
+        .guide-item span { font-size: 20px; } /* Emoji besar */
 
-        /* Highlight Sangat Terang */
+        /* Jika Aktif (Highlight Terang) */
         .guide-item.active { 
-            background: #00d2ff; color: #000; border-color: #fff;
-            box-shadow: 0 0 25px rgba(0, 210, 255, 0.8);
+            background: #00d2ff; 
+            color: #000; 
+            border-color: #fff;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.6);
             transform: scale(1.02);
-            z-index: 5;
+            font-weight: 800;
         }
         
-        .guide-item.heart-mode.active { background: #ff0055; box-shadow: 0 0 25px #ff0055; color: white; }
+        /* Baris khusus untuk LOVE (Full Width) */
+        .guide-item.full-width { grid-column: span 2; justify-content: center; background: rgba(255, 0, 85, 0.1); border-color: rgba(255, 0, 85, 0.3); }
+        .guide-item.full-width.active { background: #ff0055; color: white; }
 
-        .loading-bar { width: 100%; height: 8px; background: #222; margin-top: 10px; border-radius: 10px; overflow: hidden; }
-        .loading-fill { height: 100%; width: 0%; background: #00ffaa; transition: width 0.1s; }
+        .loading-bar { width: 100%; height: 6px; background: #222; margin-top: 20px; border-radius: 10px; overflow: hidden; position: relative; }
+        .loading-fill { height: 100%; width: 0%; background: #00ffaa; transition: width 0.1s; box-shadow: 0 0 10px #00ffaa; }
 
         #loading {
-            position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%);
-            color: #fff; font-size: 20px; text-align: center; width: 90%; z-index: 20;
-            background: rgba(0,0,0,0.8); padding: 20px; border-radius: 15px; border: 2px solid #333;
+            position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+            color: #fff; font-size: 18px; text-align: center; width: 80%;
+            background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; border: 1px solid #333;
         }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -88,24 +87,24 @@
 
     <div id="ui-panel">
         <div class="status-header">
-            <div style="font-size:12px; color:#888;">SENSOR STATUS</div>
-            <div class="status-text" id="cam-status">CARI TANGAN...</div>
+            <div class="main-title">Deteksi Gaya</div>
+            <div class="status-text" id="cam-status">Mencari Tangan...</div>
         </div>
         
         <div class="guide-container">
-            <div class="guide-item" id="g-1"><span>☝️</span> 1 Jari: Hai</div>
-            <div class="guide-item" id="g-2"><span>✌️</span> 2 Jari: Cantik</div>
-            <div class="guide-item" id="g-3"><span>🤟</span> 3 Jari: Thanks</div>
-            <div class="guide-item" id="g-4"><span>🖖</span> 4 Jari: Doa</div>
-            <div class="guide-item heart-mode" id="g-5"><span>✋</span> 5 Jari: LOVE</div>
+            <div class="guide-item" id="g-1"><span>☝️</span> 1 Jari (Hai)</div>
+            <div class="guide-item" id="g-2"><span>✌️</span> 2 Jari (Puji)</div>
+            <div class="guide-item" id="g-3"><span>🤟</span> 3 Jari (Thanks)</div>
+            <div class="guide-item" id="g-4"><span>🖖</span> 4 Jari (Doa)</div>
+            <div class="guide-item full-width" id="g-5"><span>✋</span> 5 Jari (Rentang) = ❤️</div>
         </div>
 
         <div class="loading-bar"><div class="loading-fill" id="stabilizer-bar"></div></div>
     </div>
 
     <div id="loading">
-        <h1>MEMUAT...</h1>
-        <p>1. Izinkan Kamera<br>2. Pastikan Ruangan Terang<br>3. Tunjukkan Tangan</p>
+        System Start...<br>
+        <span style="font-size:12px; color:#aaa; margin-top:5px; display:block;">Izinkan kamera (Berjalan di background)</span>
     </div>
 
     <div id="canvas-container"></div>
@@ -113,10 +112,8 @@
 
 <script>
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    // SETUP SENSOR & PARTIKEL
-    const PARTICLE_COUNT = isMobile ? 12000 : 25000; // Dikurangi dikit biar FPS lancar
-    const STABILITY_THRESHOLD = 10; // Lebih cepat responnya (sebelumnya 15/20)
+    const PARTICLE_COUNT = isMobile ? 14000 : 25000;
+    const STABILITY_THRESHOLD = 15; // Lebih cepat responnya
     
     let particles, geometry, material;
     let positions, targetPositions, colorsArray;
@@ -128,34 +125,34 @@
     let frameCounter = 0;
     const tempColor = new THREE.Color();
 
-    // --- 1. THREE.JS (VISUAL) ---
+    // --- 1. THREE.JS SETUP ---
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.02);
+    scene.fog = new THREE.FogExp2(0x000000, 0.01); // Hitam pekat
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
     
     function adjustCamera() {
         const aspect = window.innerWidth / window.innerHeight;
-        // Kamera dimundurkan dan dinaikkan supaya teks ada di atas panel UI besar
-        camera.position.z = aspect < 1 ? 110 : 60; 
-        camera.position.y = aspect < 1 ? 25 : 0; 
+        // Kamera dimundurkan lagi supaya teks tidak tertutup UI Panel di bawah
+        camera.position.z = aspect < 1 ? 100 : 60; 
+        camera.position.y = aspect < 1 ? 10 : 0; // Naikkan sedikit kameranya
         camera.updateProjectionMatrix();
     }
     adjustCamera();
 
-    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true }); // antialias false biar ringan
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // --- 2. GENERATE TEXT (LEBIH TEBAL) ---
-    function generateTextPoints(text, size = 70) {
+    // --- 2. GENERATE TEXT (LEBIH TERANG) ---
+    function generateTextPoints(text, size = 60) {
         const c = document.getElementById('textCanvas');
         const ctx = c.getContext('2d');
         ctx.clearRect(0,0,c.width,c.height);
         ctx.fillStyle = 'black'; ctx.fillRect(0,0,c.width,c.height);
         
-        ctx.fillStyle = '#ffffff'; 
+        ctx.fillStyle = '#ffffff'; // Putih Murni
         ctx.font = `900 ${size}px Arial Black, sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         
@@ -169,11 +166,11 @@
         
         const data = ctx.getImageData(0,0,c.width,c.height).data;
         const pts = [];
-        const step = 5; // Pixel skip lebih besar biar ringan
+        const step = 4; // Ringan untuk HP
         for(let y=0; y<c.height; y+=step) {
             for(let x=0; x<c.width; x+=step) {
                 if(data[(y*c.width+x)*4] > 128) {
-                    pts.push({ x: (x - c.width/2)*0.12, y: ((c.height-y)-c.height/2)*0.12, z: 0 });
+                    pts.push({ x: (x - c.width/2)*0.1, y: ((c.height-y)-c.height/2)*0.1, z: 0 });
                 }
             }
         }
@@ -182,12 +179,11 @@
 
     // --- 3. PARTICLES ---
     function initParticles() {
-        // Teks dibuat lebih singkat dan padat
-        cacheIdle = generateTextPoints("Ada Pesan\nSpesial 🤍", 70);
-        cache1 = generateTextPoints("Hai Dini! 🌸", 80);
-        cache2 = generateTextPoints("Kamu Cantik\nBanget ✨", 70);
-        cache3 = generateTextPoints("Makasih Udah\nAda Disini 💫", 65);
-        cache4 = generateTextPoints("Semoga Harimu\nMenyenangkan 🤍", 60);
+        cacheIdle = generateTextPoints("Ada Pesan\nUntuk Kamu 🤍", 60);
+        cache1 = generateTextPoints("Hai Dini 🌸\nMaaf kalau risih..", 50);
+        cache2 = generateTextPoints("Kamu Cantik\nNatural & Manis ✨", 50);
+        cache3 = generateTextPoints("Terima Kasih\nSudah Mampir 💫", 55);
+        cache4 = generateTextPoints("Semoga Harimu\nSelalu Indah 🤍", 55);
 
         geometry = new THREE.BufferGeometry();
         positions = new Float32Array(PARTICLE_COUNT * 3);
@@ -203,7 +199,7 @@
         geometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
 
         material = new THREE.PointsMaterial({
-            size: isMobile ? 0.6 : 0.4, // UKURAN PARTIKEL DIPERBESAR SUPAYA JELAS
+            size: isMobile ? 0.4 : 0.25, // Partikel lebih besar
             vertexColors: true, transparent: true, opacity: 1.0, 
             blending: THREE.AdditiveBlending, depthWrite: false
         });
@@ -213,7 +209,21 @@
         calculateShape('idle');
     }
 
-    // --- 4. LOGIKA VISUAL ---
+    // --- 4. ANIMATION LOGIC ---
+    function triggerTransitionEffect(effectType) {
+        const pos = geometry.attributes.position.array;
+        for(let i=0; i<PARTICLE_COUNT; i++) {
+            const i3 = i*3;
+            if (effectType === 'explode') {
+                pos[i3] += (Math.random()-0.5)*50; pos[i3+1] += (Math.random()-0.5)*50;
+            } else if (effectType === 'rain') {
+                pos[i3+1] += 50;
+            } else if (effectType === 'warp') {
+                pos[i3+2] += 80;
+            }
+        }
+    }
+
     function calculateShape(type) {
         currentShapeType = type;
         document.querySelectorAll('.guide-item').forEach(el => el.classList.remove('active'));
@@ -231,21 +241,21 @@
 
             if (type === 'idle') {
                 pt = cacheIdle[i % cacheIdle.length];
-                x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5)*2;
-                hue = 0.6; 
+                x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5);
+                hue = 0.6; // Biru Standby
             } 
             else if (type.startsWith('msg')) {
                 let cache = type === 'msg1'?cache1 : type==='msg2'?cache2 : type==='msg3'?cache3 : cache4;
                 pt = cache[i % cache.length];
                 x = pt.x; y = pt.y; z = pt.z;
-                hue = (x/50) + 0.5; 
+                hue = (x/50) + 0.5; // Warna-warni
             } 
             else if (type === 'heart') {
                 const t = Math.random() * Math.PI * 2;
-                let hx = 18 * Math.pow(Math.sin(t), 3);
-                let hy = 15 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                let hx = 16 * Math.pow(Math.sin(t), 3);
+                let hy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
                 x = hx; y = hy + 5; z = (Math.random()-0.5)*5;
-                hue = 0.98; // Merah
+                hue = 0.95; // Merah/Pink
             } 
             else { x=0;y=0;z=0;hue=0; }
 
@@ -253,7 +263,7 @@
             targetPositions[i3+1] = y;
             targetPositions[i3+2] = z;
 
-            tempColor.setHSL(hue % 1, 1.0, 0.7); // Lightness tinggi biar terang
+            tempColor.setHSL(hue % 1, 1.0, 0.6); // Full Saturation
             colorsArray[i3] = tempColor.r;
             colorsArray[i3+1] = tempColor.g;
             colorsArray[i3+2] = tempColor.b;
@@ -263,9 +273,15 @@
 
     function animate() {
         requestAnimationFrame(animate);
-        const lerpSpeed = 0.1; // Gerakan lebih responsif (cepat)
+        const time = Date.now() * 0.001;
+        
+        // Animasi floating pelan
+        if(currentShapeType === 'idle') particles.rotation.y = Math.sin(time*0.5) * 0.1;
+        else particles.rotation.y = 0;
 
         const pos = geometry.attributes.position.array;
+        const lerpSpeed = 0.08;
+
         for(let i=0; i<PARTICLE_COUNT; i++) {
             const i3 = i*3;
             pos[i3] += (targetPositions[i3] * physicsScale - pos[i3]) * lerpSpeed;
@@ -276,41 +292,37 @@
         renderer.render(scene, camera);
     }
 
-    // --- 5. DETEKSI TANGAN (OPTIMALISASI SENSOR HP) ---
+    // --- 5. DETEKSI TANGAN ---
     function detectGesture(landmarks) {
         const wrist = landmarks[0];
-        
-        // Logika sederhana: Apakah ujung jari lebih tinggi dari pangkal jari?
-        // Ingat: Di koordinat kamera, Y=0 itu atas. Jadi (y < y_pangkal) artinya jari ke atas.
-        
-        // Threshold dilonggarkan
-        const isFingerUp = (tipIdx, baseIdx) => {
-            return landmarks[tipIdx].y < landmarks[baseIdx].y; // Cukup cek posisi vertikal
-        };
+        const indexMCP = landmarks[5];
+        const palmSize = Math.hypot(indexMCP.x - wrist.x, indexMCP.y - wrist.y);
+
+        function isExtended(tipIdx, pipIdx) {
+            const tipDist = Math.hypot(landmarks[tipIdx].x - wrist.x, landmarks[tipIdx].y - wrist.y);
+            const pipDist = Math.hypot(landmarks[pipIdx].x - wrist.x, landmarks[pipIdx].y - wrist.y);
+            return tipDist > pipDist && tipDist > (palmSize * 1.3);
+        }
 
         const thumbTip = landmarks[4];
-        const thumbBase = landmarks[2];
-        const thumbUp = thumbTip.x < thumbBase.x; // Jempol agak tricky, pakai X (asumsi tangan kanan)
+        const thumbDist = Math.hypot(thumbTip.x - indexMCP.x, thumbTip.y - indexMCP.y);
+        const thumbUp = thumbDist > (palmSize * 0.8);
 
-        const indexUp = isFingerUp(8, 6);
-        const middleUp = isFingerUp(12, 10);
-        const ringUp = isFingerUp(16, 14);
-        const pinkyUp = isFingerUp(20, 18);
+        const indexUp  = isExtended(8, 6);
+        const middleUp = isExtended(12, 10);
+        const ringUp   = isExtended(16, 14);
+        const pinkyUp  = isExtended(20, 18);
 
         let fingerCount = 0;
-        // Hitung manual biar akurat
+        if (thumbUp) fingerCount++;
         if (indexUp) fingerCount++;
         if (middleUp) fingerCount++;
         if (ringUp) fingerCount++;
         if (pinkyUp) fingerCount++;
-        if (thumbUp || (fingerCount === 4 && thumbTip.y < landmarks[0].y)) fingerCount++; // Koreksi jempol
-        
-        // Batasi maks 5
-        if(fingerCount > 5) fingerCount = 5;
 
-        // Update Text Status
+        // Update UI Status Teks
         const statusText = document.getElementById('cam-status');
-        statusText.innerText = "DAPAT: " + fingerCount + " JARI";
+        statusText.innerText = "Terdeteksi: " + fingerCount + " Jari";
         statusText.classList.add('ok');
 
         let potentialShape = currentShapeType;
@@ -318,21 +330,20 @@
         else if (fingerCount === 4) potentialShape = 'msg4';
         else if (fingerCount === 3) potentialShape = 'msg3';
         else if (fingerCount === 2) potentialShape = 'msg2';
-        else if (fingerCount === 1) potentialShape = 'msg1';
-        else potentialShape = 'idle';
+        else if (fingerCount === 1 && indexUp) potentialShape = 'msg1';
+        else if (fingerCount === 0) potentialShape = 'idle';
 
         const bar = document.getElementById('stabilizer-bar');
         
         if (potentialShape !== lastDetectedShape) {
             lastDetectedShape = potentialShape;
             frameCounter = 0;
-            bar.style.width = "10%";
-            bar.style.background = "#ff3333";
+            bar.style.width = "0%";
+            bar.style.background = "#333";
         } else {
             if (frameCounter < STABILITY_THRESHOLD) {
                 frameCounter++;
                 bar.style.width = (frameCounter / STABILITY_THRESHOLD) * 100 + "%";
-                bar.style.background = "#00d2ff";
             }
         }
 
@@ -340,43 +351,44 @@
             bar.style.background = "#00ffaa";
             if (displayedShape !== potentialShape) {
                 displayedShape = potentialShape;
+                if (potentialShape !== 'idle') triggerTransitionEffect('explode');
                 calculateShape(potentialShape);
             }
         }
+        
+        const pinchDist = Math.hypot(landmarks[8].x - landmarks[4].x, landmarks[8].y - landmarks[4].y);
+        return { physics: (pinchDist < 0.05) ? 0.2 : 1.0 };
     }
 
     function onResults(results) {
         document.getElementById('loading').style.display = 'none';
         
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            detectGesture(results.multiHandLandmarks[0]);
+            const state = detectGesture(results.multiHandLandmarks[0]);
+            physicsScale = state.physics;
         } else {
-            document.getElementById('cam-status').innerText = "CARI TANGAN...";
-            document.getElementById('cam-status').classList.remove('ok');
-            document.getElementById('stabilizer-bar').style.width = "0%";
+            // Jika tangan hilang
+            const statusText = document.getElementById('cam-status');
+            statusText.innerText = "Mencari Tangan...";
+            statusText.classList.remove('ok');
             
             if(displayedShape !== 'idle') {
                 calculateShape('idle');
                 displayedShape = 'idle';
             }
+            document.getElementById('stabilizer-bar').style.width = "0%";
+            physicsScale = 1.0;
         }
     }
 
     const videoElement = document.getElementById('webcam-preview');
     const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-    
-    // --- SETTING SENSOR (AGRESIF) ---
-    hands.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 0, // 0 = LITE (Paling Cepat untuk HP)
-        minDetectionConfidence: 0.3, // DITURUNKAN: Biar gampang mendeteksi walau agak gelap
-        minTrackingConfidence: 0.4 
-    });
+    hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     hands.onResults(onResults);
 
     const cameraUtils = new Camera(videoElement, {
         onFrame: async () => { await hands.send({image: videoElement}); },
-        width: 480, height: 360, // Resolusi rendah biar proses cepat
+        width: 480, height: 360,
         facingMode: 'user'
     });
 
