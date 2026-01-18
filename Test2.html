@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Special Message for Dini (Cool Transitions)</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #010103; font-family: 'Segoe UI', sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+
+        /* UI Panel */
+        #ui-panel {
+            position: absolute; top: 20px; right: 20px; width: 260px;
+            background: rgba(10, 10, 20, 0.85); backdrop-filter: blur(12px);
+            padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);
+            color: #eee; z-index: 10; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* WEBCAM */
+        #webcam-container {
+             position: absolute; top: 20px; right: 340px; width: 160px; height: 120px;
+             border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.1);
+             box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 10;
+        }
+
+        h2 { font-size: 16px; margin: 0 0 15px 0; background: linear-gradient(90deg, #ff0055, #ffcc00, #00d2ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;}
+        
+        .status-box {
+            background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px;
+            text-align: center; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .status-label { font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 1px;}
+        .status-val { font-size: 16px; font-weight: 800; color: #fff; margin-top: 4px; letter-spacing: 0.5px;}
+
+        /* Debug Jari */
+        .finger-debug { font-size: 18px; margin-top: 5px; height: 24px; color: #00d2ff; text-shadow: 0 0 10px rgba(0,210,255,0.5); }
+        .finger-count { font-size: 12px; color: #ffff00; margin-top: 2px; font-weight: bold; }
+
+        .guide { font-size: 11px; color: #999; line-height: 1.6; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;}
+        .guide span { color: #fff; font-weight: bold; margin-right: 5px; }
+        
+        .loading-bar { width: 100%; height: 4px; background: #333; margin-top: 8px; border-radius: 2px; overflow: hidden; }
+        .loading-fill { height: 100%; width: 0%; background: #00d2ff; transition: width 0.1s; }
+
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #fff; font-size: 24px; font-weight: 200; pointer-events: none; letter-spacing: 2px;
+        }
+        #webcam-preview { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; transform: scaleX(-1); }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+</head>
+<body>
+
+    <div id="webcam-container"><video id="webcam-preview" playsinline></video></div>
+
+    <div id="ui-panel">
+        <h2>Pesan Ku, Untukmu</h2>
+        <div class="status-box">
+            <div class="status-label">Status</div>
+            <div class="status-val" id="ui-shape">PESAN DARIKU</div>
+            <div class="finger-debug" id="finger-icons">☺</div>
+            <div class="finger-count" id="finger-count-text">Menunggu Tangan...</div>
+            <div class="loading-bar"><div class="loading-fill" id="stabilizer-bar"></div></div>
+        </div>
+        <div class="guide">
+           *Ikuti Perintah di bawah ini dan Tahan pose Senyumnya sebentar yahh😊*<br><br>
+            ☝️ <strong>Telunjuk:</strong> Pose Gaya Jari Telunjuk☝️<br>
+            ✌️ <strong>Telunjuk+Tengah:</strong> Pose Gaya 2 Jari✌️<br>
+            🤟 <strong>+ Manis:</strong> Pose Gaya 3 Jari🤟<br>
+            🖖 <strong>+ Kelingking:</strong> Pose 4 Jari (Jempol Tutup)🖖<br>
+            ✋ <strong>5 Jari (Full):</strong> 😊
+        </div>
+    </div>
+
+    <div id="loading">Memuat Sistem...</div>
+    <div id="canvas-container"></div>
+    <canvas id="textCanvas" width="1600" height="600" style="display:none;"></canvas>
+
+<script>
+    // --- CONFIGURATION ---
+    const PARTICLE_COUNT = 28000; 
+    const STABILITY_THRESHOLD = 20; // Sensitifitas sedang (20 frame)
+    
+    // --- VARIABLES ---
+    let particles, geometry, material;
+    let positions, targetPositions, colorsArray;
+    let cacheIdle = [], cache1 = [], cache2 = [], cache3 = [], cache4 = [];
+    
+    let currentShapeType = 'idle'; 
+    let physicsScale = 1.0; 
+    
+    let lastDetectedShape = '';
+    let displayedShape = ''; // Shape yang sedang aktif ditampilkan
+    let frameCounter = 0;
+    
+    const tempColor = new THREE.Color(); 
+
+    // --- 1. SETUP THREE.JS ---
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x010103, 0.02);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.z = 55; 
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    // --- 2. GENERATE TEXT ---
+    function generateTextPoints(text, size = 60) {
+        const c = document.getElementById('textCanvas');
+        const ctx = c.getContext('2d');
+        
+        ctx.clearRect(0,0,c.width,c.height);
+        ctx.fillStyle = 'black'; ctx.fillRect(0,0,c.width,c.height);
+        
+        ctx.fillStyle = 'white'; 
+        ctx.font = `900 ${size}px Arial Black, sans-serif`; 
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        
+        const lines = text.split('\n');
+        const lineHeight = size * 1.3;
+        const startY = (c.height - ((lines.length - 1) * lineHeight)) / 2;
+
+        lines.forEach((line, index) => {
+            ctx.fillText(line, c.width/2, startY + (index * lineHeight));
+        });
+        
+        const data = ctx.getImageData(0,0,c.width,c.height).data;
+        const pts = [];
+        for(let y=0; y<c.height; y+=3) { 
+            for(let x=0; x<c.width; x+=3) {
+                if(data[(y*c.width+x)*4] > 128) {
+                    pts.push({ x: (x - c.width/2)*0.1, y: ((c.height-y)-c.height/2)*0.1, z: 0 });
+                }
+            }
+        }
+        return pts;
+    }
+
+    // --- 3. PARTICLES ---
+    function initParticles() {
+        cacheIdle = generateTextPoints("Ada Notifikasi Terbaru...\nSepertinya Tentang Kamu 🤍.", 55); 
+        cache1 = generateTextPoints("Hai Dini Revalina 🌸\nMaaf ya kalau aku sempat bikin risih.", 45); 
+        cache2 = generateTextPoints("Aku cuma mau bilang...\nKamu manis, tanpa perlu usaha ✨", 45);
+        cache3 = generateTextPoints("Terima kasih sudah hadir,\nMeski sebentar, rasanya berarti 💫", 50);
+        cache4 = generateTextPoints("Semoga langkahmu lancar,\nDan harimu selalu punya senyum 🤍", 50);
+
+        geometry = new THREE.BufferGeometry();
+        positions = new Float32Array(PARTICLE_COUNT * 3);
+        targetPositions = new Float32Array(PARTICLE_COUNT * 3);
+        colorsArray = new Float32Array(PARTICLE_COUNT * 3); 
+
+        for(let i=0; i<PARTICLE_COUNT*3; i++) {
+            positions[i] = (Math.random()-0.5) * 100; // Posisi awal random
+            targetPositions[i] = positions[i]; // Target awal sama
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3)); 
+        
+        material = new THREE.PointsMaterial({
+            size: 0.25, vertexColors: true, transparent: true, opacity: 0.95,
+            blending: THREE.AdditiveBlending, depthWrite: false
+        });
+
+        particles = new THREE.Points(geometry, material);
+        scene.add(particles);
+        
+        // Mulai langsung
+        calculateShape('idle'); 
+    }
+
+    // --- 4. LOGIKA TRANSISI & BENTUK ---
+    function triggerTransitionEffect(effectType) {
+        const pos = geometry.attributes.position.array;
+        
+        // Kita "hancurkan" posisi saat ini sebelum mereka bergerak ke target baru
+        // Ini menciptakan efek transisi yang dramatis
+        for(let i=0; i<PARTICLE_COUNT; i++) {
+            const i3 = i*3;
+            
+            if (effectType === 'explode') {
+                // Meledak ke segala arah
+                pos[i3] += (Math.random()-0.5) * 40;
+                pos[i3+1] += (Math.random()-0.5) * 40;
+                pos[i3+2] += (Math.random()-0.5) * 40;
+            } 
+            else if (effectType === 'rain') {
+                // Jatuh dari atas (Y ditambah tinggi sekali)
+                pos[i3+1] += 40 + Math.random() * 20;
+            }
+            else if (effectType === 'warp') {
+                // Zoom dari depan layar (Z ditambah)
+                pos[i3+2] += 50 + Math.random() * 50;
+            }
+            else if (effectType === 'wind') {
+                // Geser dari samping (X ditambah)
+                pos[i3] += 60; 
+                pos[i3+1] += (Math.random()-0.5) * 10;
+            }
+            else if (effectType === 'implode') {
+                // Menyebar jauh sekali lalu menyedot
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 60;
+                pos[i3] = Math.cos(angle) * radius;
+                pos[i3+1] = Math.sin(angle) * radius;
+                pos[i3+2] = (Math.random()-0.5) * 20;
+            }
+        }
+    }
+
+    function calculateShape(type) {
+        currentShapeType = type;
+        
+        let label = "STANDBY";
+        if(type === 'idle') label = "PESAN KU";
+        if(type === 'msg1') label = "HAI DINI";
+        if(type === 'msg2') label = "KAMU CANTIK";
+        if(type === 'msg3') label = "TERIMAKASIH";
+        if(type === 'msg4') label = "RESOLUSI";
+        if(type === 'heart') label = "😗";
+        
+        document.getElementById('ui-shape').innerText = label;
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const i3 = i * 3;
+            let x, y, z, hue, saturation, lightness;
+            let pt;
+
+            if (type === 'idle') {
+                pt = cacheIdle[i % cacheIdle.length];
+                x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5)*0.5;
+                hue = (x / 50) + 0.5; saturation = 1.0; lightness = 0.7; 
+            }
+            else if (type === 'msg1') {
+                pt = cache1[i % cache1.length];
+                x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5)*0.5;
+                hue = (x / 40) + 0.2; saturation = 1.0; lightness = 0.7;
+            }
+            else if (type === 'msg2') {
+                pt = cache2[i % cache2.length];
+                x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5)*0.5;
+                hue = (x / 40) + 0.8; saturation = 1.0; lightness = 0.7;
+            }
+            else if (type === 'msg3') {
+                pt = cache3[i % cache3.length];
+                x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5)*0.5;
+                hue = (x / 50) + 0.0; saturation = 1.0; lightness = 0.7;
+            }
+            else if (type === 'msg4') {
+                pt = cache4[i % cache4.length];
+                x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5)*0.5;
+                hue = (x / 60) + 0.5; saturation = 1.0; lightness = 0.7;
+            }
+            else if (type === 'heart') {
+                const t = Math.random() * Math.PI * 2;
+                let hx = 16 * Math.pow(Math.sin(t), 3);
+                let hy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                
+                x = hx * 0.9;
+                y = hy * 0.9;
+                z = (Math.random() - 0.5) * 4; 
+                y += 3;
+                hue = 0.75 + ((y+15)/30) * 0.25; 
+                saturation = 1.0; lightness = 0.6;
+            }
+            else { x=0;y=0;z=0;hue=0;saturation=0;lightness=0; }
+
+            targetPositions[i3] = x;
+            targetPositions[i3+1] = y;
+            targetPositions[i3+2] = z;
+
+            tempColor.setHSL(hue % 1, saturation, lightness);
+            colorsArray[i3] = tempColor.r;
+            colorsArray[i3+1] = tempColor.g;
+            colorsArray[i3+2] = tempColor.b;
+        }
+        geometry.attributes.color.needsUpdate = true;
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        // HAPUS ROTASI GLOBAL (Biar gak pusing)
+        // particles.rotation.y += 0.002; 
+        
+        // Tapi kita kasih gerakan "ngambang" (Floating) dikit biar gak kaku
+        const time = Date.now() * 0.001;
+        particles.position.y = Math.sin(time) * 0.5;
+
+        const pos = geometry.attributes.position.array;
+        
+        // Kecepatan gerak partikel (Lerp)
+        // 0.08 = agak cepat tapi smooth
+        const lerpSpeed = 0.08; 
+
+        for(let i=0; i<PARTICLE_COUNT; i++) {
+            const i3 = i*3;
+            let tx = targetPositions[i3] * physicsScale;
+            let ty = targetPositions[i3+1] * physicsScale;
+            let tz = targetPositions[i3+2] * physicsScale;
+            
+            // Gerakan fisika dasar (menuju target)
+            pos[i3] += (tx - pos[i3]) * lerpSpeed;
+            pos[i3+1] += (ty - pos[i3+1]) * lerpSpeed;
+            pos[i3+2] += (tz - pos[i3+2]) * lerpSpeed;
+        }
+        geometry.attributes.position.needsUpdate = true;
+        renderer.render(scene, camera);
+    }
+
+    // --- 5. LOGIKA DETEKSI ---
+    function detectGesture(landmarks) {
+        const wrist = landmarks[0];
+        const indexMCP = landmarks[5];
+        const palmSize = Math.hypot(indexMCP.x - wrist.x, indexMCP.y - wrist.y);
+
+        function isExtended(tipIdx, pipIdx) {
+            const tipDist = Math.hypot(landmarks[tipIdx].x - wrist.x, landmarks[tipIdx].y - wrist.y);
+            const pipDist = Math.hypot(landmarks[pipIdx].x - wrist.x, landmarks[pipIdx].y - wrist.y);
+            return tipDist > pipDist && tipDist > (palmSize * 1.3);
+        }
+
+        const thumbTip = landmarks[4];
+        const thumbDist = Math.hypot(thumbTip.x - indexMCP.x, thumbTip.y - indexMCP.y);
+        const thumbUp = thumbDist > (palmSize * 0.7);
+
+        const indexUp  = isExtended(8, 6);
+        const middleUp = isExtended(12, 10);
+        const ringUp   = isExtended(16, 14);
+        const pinkyUp  = isExtended(20, 18);
+
+        let fingerCount = 0;
+        if (thumbUp) fingerCount++;
+        if (indexUp) fingerCount++;
+        if (middleUp) fingerCount++;
+        if (ringUp) fingerCount++;
+        if (pinkyUp) fingerCount++;
+
+        let icons = "";
+        if(thumbUp) icons += "👍";
+        if(indexUp) icons += "☝️";
+        if(middleUp) icons += "🖕";
+        if(ringUp) icons += "💍";
+        if(pinkyUp) icons += "🤙";
+        document.getElementById('finger-icons').innerText = icons;
+        document.getElementById('finger-count-text').innerText = "Terdeteksi: " + fingerCount + " Jari";
+
+        let potentialShape = currentShapeType; 
+
+        // Mapping Jari ke Shape
+        if (fingerCount === 5) potentialShape = 'heart';
+        else if (fingerCount === 4) potentialShape = 'msg4';
+        else if (fingerCount === 3) potentialShape = 'msg3';
+        else if (fingerCount === 2) potentialShape = 'msg2'; 
+        else if (fingerCount === 1 && indexUp) potentialShape = 'msg1';
+        else if (fingerCount === 0) potentialShape = 'idle'; 
+
+        const bar = document.getElementById('stabilizer-bar');
+        
+        // Logika Stabilizer
+        if (potentialShape !== lastDetectedShape) {
+            lastDetectedShape = potentialShape;
+            frameCounter = 0;
+            bar.style.width = "0%";
+            bar.style.background = "#333";
+        } else {
+            if (frameCounter < STABILITY_THRESHOLD) {
+                frameCounter++;
+                const pct = (frameCounter / STABILITY_THRESHOLD) * 100;
+                bar.style.width = pct + "%";
+                bar.style.background = "#00d2ff";
+            }
+        }
+
+        // JIKA SUDAH STABIL & SHAPE BERUBAH DARI YANG TAMPIL
+        if (frameCounter >= STABILITY_THRESHOLD) {
+            bar.style.background = "#00ffaa";
+            
+            // Cek apakah perlu ganti bentuk visual
+            if (displayedShape !== potentialShape) {
+                displayedShape = potentialShape;
+                
+                // --- TRIGGER EFEK TRANSISI DISINI ---
+                if (potentialShape === 'msg1') triggerTransitionEffect('rain'); // 1 Jari = Hujan
+                else if (potentialShape === 'msg2') triggerTransitionEffect('explode'); // 2 Jari = Ledakan
+                else if (potentialShape === 'msg3') triggerTransitionEffect('warp'); // 3 Jari = Warp
+                else if (potentialShape === 'msg4') triggerTransitionEffect('wind'); // 4 Jari = Angin
+                else if (potentialShape === 'heart') triggerTransitionEffect('implode'); // Love = Sedot
+                else triggerTransitionEffect('wind'); // Default
+
+                calculateShape(potentialShape);
+            }
+        }
+
+        const pinchDist = Math.hypot(landmarks[8].x - landmarks[4].x, landmarks[8].y - landmarks[4].y);
+        let physics = (pinchDist < 0.05) ? 0.15 : 1.0;
+
+        return { physics };
+    }
+
+    function onResults(results) {
+        document.getElementById('loading').style.display = 'none';
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const lm = results.multiHandLandmarks[0];
+            const state = detectGesture(lm);
+            physicsScale = state.physics;
+        } else {
+            // Kalau tangan hilang, kembali ke idle dengan efek angin pelan
+            if(displayedShape !== 'idle') {
+                triggerTransitionEffect('wind');
+                calculateShape('idle');
+                displayedShape = 'idle';
+            }
+            document.getElementById('stabilizer-bar').style.width = "0%";
+            document.getElementById('finger-icons').innerText = "☺";
+            document.getElementById('finger-count-text').innerText = "Tidak ada tangan";
+        }
+    }
+
+    const videoElement = document.getElementById('webcam-preview');
+    const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+    hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+    hands.onResults(onResults);
+
+    const cameraUtils = new Camera(videoElement, {
+        onFrame: async () => { await hands.send({image: videoElement}); },
+        width: 480, height: 360
+    });
+
+    initParticles();
+    cameraUtils.start();
+    animate();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+</script>
+</body>
+</html>
