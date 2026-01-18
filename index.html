@@ -3,55 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>For You - Top Position Fix</title>
+    <title>Clean Full Screen</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; touch-action: none; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; touch-action: none; }
         
+        /* CANVAS FULL SCREEN */
         #canvas-container { width: 100vw; height: 100vh; display: block; position: fixed; top: 0; left: 0; z-index: 1; }
 
-        /* UI PANEL LEBIH PENDEK (Hanya 35% layar) */
-        #ui-panel {
-            position: absolute; 
-            bottom: 0; 
-            left: 0; 
-            width: 100%;
-            height: 35vh; /* Dikecilkan biar area teks makin luas */
-            background: rgba(10, 10, 10, 0.9); /* Sedikit transparan */
-            backdrop-filter: blur(10px); /* Efek kaca */
-            padding: 15px; 
-            border-top: 2px solid #00d2ff;
-            color: #fff; z-index: 10; 
-            box-sizing: border-box;
-            border-radius: 20px 20px 0 0;
-            display: flex; flex-direction: column;
-        }
-
+        /* VIDEO PREVIEW KECIL (Transparan) - Biar tau posisi tangan aja */
         #webcam-preview { 
-            position: absolute; top: 15px; right: 15px; width: 60px; opacity: 0.5; 
-            border: 1px solid #333; z-index: 20; border-radius: 6px; transform: scaleX(-1);
+            position: absolute; top: 20px; right: 20px; width: 80px; 
+            opacity: 0.3; border-radius: 8px; transform: scaleX(-1); z-index: 10;
         } 
 
-        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        .status-text { font-size: 14px; font-weight: bold; color: #ff3333; }
-        .status-text.ok { color: #00ffaa; }
-
-        .guide-container { 
-            display: grid; grid-template-columns: 1fr; gap: 8px; 
-            overflow-y: auto; flex-grow: 1; 
-        }
-
-        .guide-item {
-            background: rgba(255,255,255,0.08); padding: 8px 15px; border-radius: 8px; 
-            color: #ccc; font-size: 14px; font-weight: 600; 
-            display: flex; align-items: center; gap: 10px;
-        }
-        .guide-item span { font-size: 20px; }
-        .guide-item.active { background: #00d2ff; color: #000; transform: scale(1.02); }
-        
+        /* LOADING INDICATOR */
         #loading {
-            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
-            color: #fff; font-size: 14px; text-align: center; width: 80%; z-index: 5;
-            text-shadow: 0 0 10px #000;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #fff; font-size: 16px; text-align: center; z-index: 20;
+            text-shadow: 0 0 10px #00d2ff; pointer-events: none;
         }
     </style>
     
@@ -63,28 +32,16 @@
 
     <video id="webcam-preview" playsinline muted autoplay></video>
 
-    <div id="ui-panel">
-        <div class="status-header">
-            <div style="font-size:10px; color:#888;">STATUS</div>
-            <div class="status-text" id="cam-status">CARI TANGAN...</div>
-        </div>
-        <div class="guide-container">
-            <div class="guide-item" id="g-1"><span>☝️</span> 1 Jari</div>
-            <div class="guide-item" id="g-2"><span>✌️</span> 2 Jari</div>
-            <div class="guide-item" id="g-3"><span>🤟</span> 3 Jari</div>
-            <div class="guide-item" id="g-4"><span>🖖</span> 4 Jari</div>
-            <div class="guide-item" id="g-5"><span>✋</span> 5 Jari (Love)</div>
-        </div>
+    <div id="loading">
+        <b>MEMUAT SISTEM...</b><br>
+        Arahkan kamera ke tangan 👋
     </div>
 
-    <div id="loading"><b>MEMUAT...</b><br>Gunakan Mode Portrait</div>
-
     <div id="canvas-container"></div>
-    <canvas id="textCanvas" width="800" height="800" style="display:none;"></canvas>
+    <canvas id="textCanvas" width="1000" height="1000" style="display:none;"></canvas>
 
 <script>
-    // --- SETTINGAN FIXED ---
-    const PARTICLE_COUNT = 6000; 
+    const PARTICLE_COUNT = 6000; // Jumlah partikel pas buat HP
     
     let particles, geometry, material;
     let positions, targetPositions, colorsArray;
@@ -94,33 +51,32 @@
     const tempColor = new THREE.Color();
 
     const scene = new THREE.Scene();
-    // Fog dikurangi biar teks di atas tetap terang
-    scene.fog = new THREE.FogExp2(0x000000, 0.015); 
+    scene.fog = new THREE.FogExp2(0x000000, 0.02);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.z = 100; // Kamera mundur
-    camera.position.y = 0;   // Kamera sejajar mata (Teks nanti kita angkat manual)
+    // Posisi kamera standar karena tidak ada menu yang menghalangi
+    camera.position.z = 100; 
+    camera.position.y = 0;   
 
     const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(1); 
+    renderer.setPixelRatio(1);
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // --- GENERATOR TEKS (DENGAN POSISI Y+ YANG TINGGI) ---
+    // --- GENERATOR TEKS ---
     function generateTextPoints(text) {
         const c = document.getElementById('textCanvas');
         const ctx = c.getContext('2d');
         ctx.clearRect(0,0,c.width,c.height);
         
-        // Font size dikecilkan sedikit biar aman
-        const fontSize = 55; 
+        const fontSize = 80; // Font Lebih Besar biar kebaca
         
         ctx.fillStyle = '#ffffff'; 
         ctx.font = `900 ${fontSize}px Arial, sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         
         const lines = text.split('\n');
-        const lineHeight = fontSize * 1.3;
+        const lineHeight = fontSize * 1.2;
         const startY = (c.height - ((lines.length - 1) * lineHeight)) / 2;
 
         lines.forEach((line, index) => {
@@ -133,11 +89,9 @@
         for(let y=0; y<c.height; y+=step) {
             for(let x=0; x<c.width; x+=step) {
                 if(data[(y*c.width+x)*4] > 128) {
-                    // DISINI KUNCINYA: +35 di sumbu Y
-                    // Ini memaksa teks naik ke atas layar, menjauhi menu bawah
                     pts.push({ 
                         x: (x - c.width/2) * 0.18, 
-                        y: ((c.height-y) - c.height/2) * 0.18 + 35, 
+                        y: ((c.height-y) - c.height/2) * 0.18, // TEPAT DI TENGAH
                         z: 0 
                     });
                 }
@@ -147,11 +101,12 @@
     }
 
     function initParticles() {
-        cacheIdle = generateTextPoints("Pesan\nUntukmu 🤍");
-        cache1 = generateTextPoints("Hai\nCantik! 🌸");
-        cache2 = generateTextPoints("Kamu\nKeren ✨");
-        cache3 = generateTextPoints("Makasih\nYa 💫");
-        cache4 = generateTextPoints("Semoga\nBahagia 🤍");
+        // Teks dibuat simple & besar
+        cacheIdle = generateTextPoints("Hai\nKamu 👋");
+        cache1 = generateTextPoints("Cantik\nBanget 🌸"); // 1 Jari
+        cache2 = generateTextPoints("Senyum\nDong 😊");   // 2 Jari
+        cache3 = generateTextPoints("Makasih\nYa ✨");     // 3 Jari
+        cache4 = generateTextPoints("Sehat\nSelalu 🤲");   // 4 Jari
 
         geometry = new THREE.BufferGeometry();
         positions = new Float32Array(PARTICLE_COUNT * 3);
@@ -160,15 +115,14 @@
 
         for(let i=0; i<PARTICLE_COUNT*3; i++) {
             positions[i] = (Math.random()-0.5) * 100;
-            targetPositions[i] = positions[i]; // Start tersebar
+            targetPositions[i] = positions[i];
         }
 
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
 
         material = new THREE.PointsMaterial({
-            size: 0.9, 
-            vertexColors: true, transparent: true, opacity: 1.0, 
+            size: 0.8, vertexColors: true, transparent: true, opacity: 1.0, 
             blending: THREE.AdditiveBlending, depthWrite: false
         });
 
@@ -179,14 +133,7 @@
 
     function calculateShape(type) {
         currentShapeType = type;
-        document.querySelectorAll('.guide-item').forEach(el => el.classList.remove('active'));
-
-        if(type === 'msg1') document.getElementById('g-1').classList.add('active');
-        if(type === 'msg2') document.getElementById('g-2').classList.add('active');
-        if(type === 'msg3') document.getElementById('g-3').classList.add('active');
-        if(type === 'msg4') document.getElementById('g-4').classList.add('active');
-        if(type === 'heart') document.getElementById('g-5').classList.add('active');
-
+        
         for (let i = 0; i < PARTICLE_COUNT; i++) {
             const i3 = i * 3;
             let x, y, z, hue;
@@ -195,26 +142,24 @@
             if (type === 'idle') {
                 pt = cacheIdle[i % cacheIdle.length];
                 x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5)*5;
-                hue = 0.6; // Biru statis untuk idle
+                hue = 0.6; // Biru
             } 
             else if (type.startsWith('msg')) {
                 let cache = type === 'msg1'?cache1 : type==='msg2'?cache2 : type==='msg3'?cache3 : cache4;
                 pt = cache[i % cache.length];
                 x = pt.x; y = pt.y; z = pt.z;
-                // Pelangi
-                hue = (x/80) + 0.5; 
+                hue = (x/100) + 0.5; // Pelangi
             } 
             else if (type === 'heart') {
                 const t = Math.random() * Math.PI * 2;
-                let hx = 16 * Math.pow(Math.sin(t), 3);
-                let hy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                let hx = 18 * Math.pow(Math.sin(t), 3);
+                let hy = 15 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
                 
-                x = hx * 1.2; 
-                y = (hy * 1.2) + 40; // HATI JUGA DIPAKSA NAIK (+40)
+                x = hx * 1.5; y = (hy * 1.5) + 10; // Hati Besar di tengah
                 z = (Math.random()-0.5)*5;
                 hue = 0.0; // Merah
             } 
-            else { x=0;y=100;z=0;hue=0; } // Default lempar ke atas
+            else { x=0;y=0;z=0;hue=0; } 
 
             targetPositions[i3] = x;
             targetPositions[i3+1] = y;
@@ -231,6 +176,7 @@
     function animate() {
         requestAnimationFrame(animate);
         const pos = geometry.attributes.position.array;
+        // Gerakan partikel smooth
         for(let i=0; i<PARTICLE_COUNT*3; i++) {
             pos[i] += (targetPositions[i] - pos[i]) * 0.1;
         }
@@ -238,7 +184,6 @@
         renderer.render(scene, camera);
     }
 
-    // --- SENSOR ---
     function onResults(results) {
         document.getElementById('loading').style.display = 'none';
         
@@ -251,14 +196,11 @@
             if(isUp(12,10)) count++;
             if(isUp(16,14)) count++;
             if(isUp(20,18)) count++;
-            if(lm[4].x < lm[3].x) count++; // Jempol simpel
+            if(lm[4].x < lm[3].x) count++; 
 
             if(count > 5) count = 5;
 
-            const st = document.getElementById('cam-status');
-            st.innerText = "DAPAT: " + count + " JARI";
-            st.classList.add('ok');
-
+            // Logic Ubah Teks tanpa UI Panel
             let shape = 'idle';
             if(count===1) shape='msg1';
             else if(count===2) shape='msg2';
@@ -271,8 +213,11 @@
                 calculateShape(shape);
             }
         } else {
-            document.getElementById('cam-status').innerText = "CARI TANGAN...";
-            document.getElementById('cam-status').classList.remove('ok');
+            // Kalau tidak ada tangan, kembali ke text awal
+            if(lastDetectedShape !== 'idle') {
+                lastDetectedShape = 'idle';
+                calculateShape('idle');
+            }
         }
     }
 
