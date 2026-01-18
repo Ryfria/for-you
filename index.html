@@ -3,23 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>For You (Rainbow & High Position)</title>
+    <title>For You (Top UI Layout)</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         #canvas-container { width: 100vw; height: 100vh; display: block; position: fixed; top: 0; left: 0; z-index: 1; }
 
-        /* --- UI PANEL (TETAP BESAR) --- */
+        /* --- UI PANEL DI ATAS (TOP) --- */
         #ui-panel {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            height: 45vh; /* 45% layar bawah untuk menu */
-            background: linear-gradient(to top, #000 20%, rgba(10,10,20,0.95) 100%);
+            position: absolute; 
+            top: 0; /* NEMPEL DI ATAS */
+            left: 0; width: 100%;
+            height: 45vh; /* Mengambil 45% layar atas */
+            background: linear-gradient(to bottom, #000 20%, rgba(10,10,20,0.95) 100%);
             padding: 15px 20px; 
-            border-top: 3px solid #00d2ff;
+            border-bottom: 3px solid #00d2ff; /* Garis neon di bawah panel */
             color: #fff; z-index: 10; 
             box-sizing: border-box;
-            border-radius: 25px 25px 0 0;
+            border-radius: 0 0 25px 25px; /* Sudut tumpul di bawah */
             display: flex; flex-direction: column;
-            box-shadow: 0 -10px 60px rgba(0, 210, 255, 0.3);
+            box-shadow: 0 10px 60px rgba(0, 210, 255, 0.3);
         }
 
         #webcam-preview { display: none; } 
@@ -58,8 +60,9 @@
         .loading-bar { width: 100%; height: 8px; background: #222; margin-top: 10px; border-radius: 10px; overflow: hidden; }
         .loading-fill { height: 100%; width: 0%; background: #00ffaa; transition: width 0.1s; }
 
+        /* LOADING DI PINDAH KE BAWAH BIAR GAK KETUTUP PANEL ATAS */
         #loading {
-            position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%);
+            position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%);
             color: #fff; font-size: 20px; text-align: center; width: 90%; z-index: 20;
             background: rgba(0,0,0,0.8); padding: 20px; border-radius: 15px; border: 2px solid #333;
         }
@@ -101,9 +104,8 @@
 <script>
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    // CONFIG
     const PARTICLE_COUNT = isMobile ? 13000 : 25000;
-    const STABILITY_THRESHOLD = 8; // Lebih cepat lagi responnya
+    const STABILITY_THRESHOLD = 8;
     
     let particles, geometry, material;
     let positions, targetPositions, colorsArray;
@@ -122,9 +124,9 @@
     
     function adjustCamera() {
         const aspect = window.innerWidth / window.innerHeight;
-        // KAMERA DIGESER BIAR TEKS NAIK KE ATAS
+        // KAMERA DIGESER AGAR TEKS ADA DI BAGIAN BAWAH LAYAR
         camera.position.z = aspect < 1 ? 110 : 60; 
-        camera.position.y = aspect < 1 ? -10 : 0; // -10 artinya kamera turun, objek jadi kelihatan NAIK
+        camera.position.y = aspect < 1 ? 20 : 0; // Posisi kamera agak naik, biar objek terlihat di bawah
         camera.updateProjectionMatrix();
     }
     adjustCamera();
@@ -134,7 +136,7 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // --- GENERATE TEXT (DIPINDAHKAN KE ATAS) ---
+    // --- GENERATE TEXT (DITURUNKAN KE BAWAH) ---
     function generateTextPoints(text, size = 70) {
         const c = document.getElementById('textCanvas');
         const ctx = c.getContext('2d');
@@ -159,10 +161,10 @@
         for(let y=0; y<c.height; y+=step) {
             for(let x=0; x<c.width; x+=step) {
                 if(data[(y*c.width+x)*4] > 128) {
-                    // Y DITAMBAH +25 AGAR POSISI NAIK DRASTIS DI LAYAR
+                    // Y DIKURANGI (-25) AGAR POSISI TURUN KE BAWAH (AREA KOSONG)
                     pts.push({ 
                         x: (x - c.width/2)*0.12, 
-                        y: ((c.height-y)-c.height/2)*0.12 + 25, 
+                        y: ((c.height-y)-c.height/2)*0.12 - 25, 
                         z: 0 
                     });
                 }
@@ -192,7 +194,7 @@
         geometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
 
         material = new THREE.PointsMaterial({
-            size: isMobile ? 0.7 : 0.4, // Partikel besar
+            size: isMobile ? 0.7 : 0.4, 
             vertexColors: true, transparent: true, opacity: 1.0, 
             blending: THREE.AdditiveBlending, depthWrite: false
         });
@@ -202,7 +204,7 @@
         calculateShape('idle');
     }
 
-    // --- PEWARNAAN PELANGI (RAINBOW MODE) ---
+    // --- PEWARNAAN PELANGI ---
     function calculateShape(type) {
         currentShapeType = type;
         document.querySelectorAll('.guide-item').forEach(el => el.classList.remove('active'));
@@ -218,13 +220,10 @@
             let x, y, z, hue, sat, light;
             let pt;
 
-            // LOGIKA WARNA PELANGI
-            // Hue (H) ditentukan oleh posisi X partikel
-            
             if (type === 'idle') {
                 pt = cacheIdle[i % cacheIdle.length];
                 x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5)*2;
-                hue = (x / 60) + 0.5; // Gradasi Biru-Cyan
+                hue = (x / 60) + 0.5; 
                 sat = 0.9; light = 0.7;
             } 
             else if (type.startsWith('msg')) {
@@ -232,19 +231,18 @@
                 pt = cache[i % cache.length];
                 x = pt.x; y = pt.y; z = pt.z;
                 
-                // PELANGI X-AXIS:
-                // x biasanya range -50 sampai 50. Kita normalisasi.
-                hue = (x / 80) + 0.5; // Ini bikin pelangi menyamping
-                sat = 1.0; // Warna Penuh
-                light = 0.6; // Terang
+                // Pelangi X-Axis
+                hue = (x / 80) + 0.5; 
+                sat = 1.0; light = 0.6; 
             } 
             else if (type === 'heart') {
                 const t = Math.random() * Math.PI * 2;
                 let hx = 18 * Math.pow(Math.sin(t), 3);
                 let hy = 15 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-                x = hx; y = hy + 25; // Hati juga dinaikkan (+25)
+                // Posisi Hati juga diturunkan (-25)
+                x = hx; y = hy - 25; 
                 z = (Math.random()-0.5)*5;
-                hue = 0.95 + Math.random()*0.05; // Merah variasi
+                hue = 0.95 + Math.random()*0.05; 
                 sat = 1.0; light = 0.6;
             } 
             else { x=0;y=0;z=0;hue=0;sat=0;light=0; }
@@ -276,7 +274,6 @@
         renderer.render(scene, camera);
     }
 
-    // --- SENSOR MODE AGRESIF ---
     function detectGesture(landmarks) {
         const wrist = landmarks[0];
         const isFingerUp = (tipIdx, baseIdx) => landmarks[tipIdx].y < landmarks[baseIdx].y;
