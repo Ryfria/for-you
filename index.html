@@ -123,10 +123,10 @@
     function adjustCamera() {
         const aspect = window.innerWidth / window.innerHeight;
         if (aspect < 1) {
-            // PORTRAIT (HP Berdiri): Mundur jauh
+            // PORTRAIT (HP Berdiri): Mundur jauh (90)
             camera.position.z = 90; 
         } else {
-            // LANDSCAPE: Standar
+            // LANDSCAPE: Standar (55)
             camera.position.z = 55;
         }
         camera.updateProjectionMatrix();
