@@ -3,57 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Special Message for Dini (Mobile Optimized & Bright)</title>
+    <title>For You (Rainbow & High Position)</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #010103; font-family: 'Segoe UI', sans-serif; touch-action: none; }
-        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; touch-action: none; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; position: fixed; top: 0; left: 0; z-index: 1; }
 
-        /* --- UI PANEL (DIBESARKAN) --- */
+        /* --- UI PANEL (TETAP BESAR) --- */
         #ui-panel {
-            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 400px;
-            background: rgba(15, 15, 25, 0.9); backdrop-filter: blur(15px);
-            padding: 20px; border-radius: 22px; border: 1px solid rgba(255,255,255,0.15);
-            color: #eee; z-index: 10; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-            transition: all 0.3s;
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            height: 45vh; /* 45% layar bawah untuk menu */
+            background: linear-gradient(to top, #000 20%, rgba(10,10,20,0.95) 100%);
+            padding: 15px 20px; 
+            border-top: 3px solid #00d2ff;
+            color: #fff; z-index: 10; 
+            box-sizing: border-box;
+            border-radius: 25px 25px 0 0;
+            display: flex; flex-direction: column;
+            box-shadow: 0 -10px 60px rgba(0, 210, 255, 0.3);
         }
 
-        /* --- WEBCAM (DIBESARKAN) --- */
-        #webcam-container {
-             position: absolute; top: 15px; right: 15px; 
-             /* Ukuran diperbesar signifikan untuk HP */
-             width: 140px; height: 186px; 
-             border-radius: 16px; overflow: hidden; 
-             border: 3px solid rgba(255,255,255,0.3); /* Border lebih terang */
-             box-shadow: 0 8px 25px rgba(0,0,0,0.5); z-index: 5; background: #000;
+        #webcam-preview { display: none; } 
+
+        .status-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333; 
         }
+        .status-text { 
+            font-size: 18px; font-weight: bold; color: #ff3333; 
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .status-text.ok { color: #00ffaa; text-shadow: 0 0 10px #00ffaa; }
 
-        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .status-val { font-size: 16px; font-weight: 900; color: #fff; letter-spacing: 0.5px; text-transform: uppercase;}
-        .finger-debug { font-size: 24px; } /* Ikon jari lebih besar */
-
-        /* --- TOMBOL PANDUAN (DIBESARKAN) --- */
+        /* --- GRID TOMBOL --- */
         .guide-container {
-            display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px;
+            display: grid; grid-template-columns: 1fr; gap: 8px; 
+            overflow-y: auto; flex-grow: 1;
         }
-        .guide-item {
-            /* Font lebih besar dan padding lebih lega */
-            font-size: 13px; font-weight: 600;
-            background: rgba(255,255,255,0.12); padding: 8px 12px; border-radius: 10px; color: #ccc;
-            transition: all 0.2s;
-        }
-        .guide-item.active { background: #00d2ff; color: #000; font-weight: 800; box-shadow: 0 0 15px rgba(0,210,255,0.4); }
 
-        .loading-bar { width: 100%; height: 5px; background: #333; margin-top: 15px; border-radius: 3px; overflow: hidden; }
+        .guide-item {
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 20px; border-radius: 15px; color: #ccc;
+            font-size: 18px; font-weight: 700;
+            display: flex; align-items: center; justify-content: flex-start; gap: 15px;
+            transition: all 0.1s ease;
+        }
+        .guide-item span { font-size: 28px; }
+
+        .guide-item.active { 
+            background: #00d2ff; color: #000; border-color: #fff;
+            box-shadow: 0 0 25px rgba(0, 210, 255, 0.8); transform: scale(1.02); z-index: 5;
+        }
+        .guide-item.heart-mode.active { background: #ff0055; box-shadow: 0 0 25px #ff0055; color: white; }
+
+        .loading-bar { width: 100%; height: 8px; background: #222; margin-top: 10px; border-radius: 10px; overflow: hidden; }
         .loading-fill { height: 100%; width: 0%; background: #00ffaa; transition: width 0.1s; }
 
         #loading {
-            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
-            color: #fff; font-size: 20px; font-weight: 300; pointer-events: none; text-align: center; width: 90%;
+            position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%);
+            color: #fff; font-size: 20px; text-align: center; width: 90%; z-index: 20;
+            background: rgba(0,0,0,0.8); padding: 20px; border-radius: 15px; border: 2px solid #333;
         }
-        #loading span { display: block; font-size: 14px; color: #888; margin-top: 8px; }
-
-        #webcam-preview { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
     </style>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -62,28 +71,28 @@
 </head>
 <body>
 
-    <div id="webcam-container"><video id="webcam-preview" playsinline muted autoplay></video></div>
+    <video id="webcam-preview" playsinline muted autoplay></video>
 
     <div id="ui-panel">
         <div class="status-header">
-            <div class="status-val" id="ui-shape">PESAN KU, UNTUKMU</div>
-            <div class="finger-debug" id="finger-icons">☺</div>
+            <div style="font-size:12px; color:#888;">SENSOR STATUS</div>
+            <div class="status-text" id="cam-status">CARI TANGAN...</div>
         </div>
         
         <div class="guide-container">
-            <div class="guide-item" id="g-1">☝️ 1: Hai</div>
-            <div class="guide-item" id="g-2">✌️ 2: Cantik</div>
-            <div class="guide-item" id="g-3">🤟 3: Thanks</div>
-            <div class="guide-item" id="g-4">🖖 4: Doa</div>
-            <div class="guide-item" id="g-5">✋ 5: ❤️</div>
+            <div class="guide-item" id="g-1"><span>☝️</span> 1 Jari: Hai</div>
+            <div class="guide-item" id="g-2"><span>✌️</span> 2 Jari: Cantik</div>
+            <div class="guide-item" id="g-3"><span>🤟</span> 3 Jari: Thanks</div>
+            <div class="guide-item" id="g-4"><span>🖖</span> 4 Jari: Doa</div>
+            <div class="guide-item heart-mode" id="g-5"><span>✋</span> 5 Jari: LOVE</div>
         </div>
 
         <div class="loading-bar"><div class="loading-fill" id="stabilizer-bar"></div></div>
     </div>
 
     <div id="loading">
-        Memuat Sistem...<br>
-        <span>Izinkan akses kamera & Tunggu sebentar</span>
+        <h1>MEMUAT...</h1>
+        <p>Arahkan kamera ke tangan di tempat terang.</p>
     </div>
 
     <div id="canvas-container"></div>
@@ -92,60 +101,48 @@
 <script>
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    // --- CONFIGURATION ---
-    const PARTICLE_COUNT = isMobile ? 15000 : 28000; // Sedikit dinaikkan untuk HP
-    const STABILITY_THRESHOLD = 20; 
+    // CONFIG
+    const PARTICLE_COUNT = isMobile ? 13000 : 25000;
+    const STABILITY_THRESHOLD = 8; // Lebih cepat lagi responnya
     
-    // --- VARIABLES ---
     let particles, geometry, material;
     let positions, targetPositions, colorsArray;
     let cacheIdle = [], cache1 = [], cache2 = [], cache3 = [], cache4 = [];
-    
-    let currentShapeType = 'idle'; 
-    let physicsScale = 1.0; 
-    
+    let currentShapeType = 'idle';
+    let physicsScale = 1.0;
     let lastDetectedShape = '';
-    let displayedShape = ''; 
+    let displayedShape = '';
     let frameCounter = 0;
-    
-    const tempColor = new THREE.Color(); 
+    const tempColor = new THREE.Color();
 
-    // --- 1. SETUP THREE.JS ---
     const scene = new THREE.Scene();
-    // Kabut dikurangi biar lebih clear
-    scene.fog = new THREE.FogExp2(0x010103, 0.01);
+    scene.fog = new THREE.FogExp2(0x000000, 0.02);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
     
     function adjustCamera() {
         const aspect = window.innerWidth / window.innerHeight;
-        if (aspect < 1) {
-            // Portrait: Mundur biar muat
-            camera.position.z = 90; 
-        } else {
-            // Landscape
-            camera.position.z = 55;
-        }
+        // KAMERA DIGESER BIAR TEKS NAIK KE ATAS
+        camera.position.z = aspect < 1 ? 110 : 60; 
+        camera.position.y = aspect < 1 ? -10 : 0; // -10 artinya kamera turun, objek jadi kelihatan NAIK
         camera.updateProjectionMatrix();
     }
     adjustCamera();
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // --- 2. GENERATE TEXT ---
-    function generateTextPoints(text, size = 60) {
+    // --- GENERATE TEXT (DIPINDAHKAN KE ATAS) ---
+    function generateTextPoints(text, size = 70) {
         const c = document.getElementById('textCanvas');
         const ctx = c.getContext('2d');
-        
         ctx.clearRect(0,0,c.width,c.height);
         ctx.fillStyle = 'black'; ctx.fillRect(0,0,c.width,c.height);
         
-        // Teks Putih Solid
         ctx.fillStyle = '#ffffff'; 
-        ctx.font = `900 ${size}px Arial Black, sans-serif`; 
+        ctx.font = `900 ${size}px Arial Black, sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         
         const lines = text.split('\n');
@@ -158,122 +155,105 @@
         
         const data = ctx.getImageData(0,0,c.width,c.height).data;
         const pts = [];
-        const step = isMobile ? 4 : 3; 
-        
-        for(let y=0; y<c.height; y+=step) { 
+        const step = 5; 
+        for(let y=0; y<c.height; y+=step) {
             for(let x=0; x<c.width; x+=step) {
-                // Threshold diturunkan biar lebih banyak partikel yang keambil
-                if(data[(y*c.width+x)*4] > 100) {
-                    pts.push({ x: (x - c.width/2)*0.1, y: ((c.height-y)-c.height/2)*0.1, z: 0 });
+                if(data[(y*c.width+x)*4] > 128) {
+                    // Y DITAMBAH +25 AGAR POSISI NAIK DRASTIS DI LAYAR
+                    pts.push({ 
+                        x: (x - c.width/2)*0.12, 
+                        y: ((c.height-y)-c.height/2)*0.12 + 25, 
+                        z: 0 
+                    });
                 }
             }
         }
         return pts;
     }
 
-    // --- 3. PARTICLES ---
     function initParticles() {
-        cacheIdle = generateTextPoints("Ada Notifikasi Terbaru...\nSepertinya Tentang Kamu 🤍.", 55); 
-        cache1 = generateTextPoints("Hai Dini Revalina 🌸\nMaaf ya kalau aku sempat bikin risih.", 45); 
-        cache2 = generateTextPoints("Aku cuma mau bilang...\nKamu manis, tanpa perlu usaha ✨", 45);
-        cache3 = generateTextPoints("Terima kasih sudah hadir,\nMeski sebentar, rasanya berarti 💫", 50);
-        cache4 = generateTextPoints("Semoga langkahmu lancar,\nDan harimu selalu punya senyum 🤍", 50);
+        cacheIdle = generateTextPoints("Ada Pesan\nSpesial 🤍", 70);
+        cache1 = generateTextPoints("Hai Dini! 🌸", 80);
+        cache2 = generateTextPoints("Kamu Cantik\nBanget ✨", 70);
+        cache3 = generateTextPoints("Makasih Udah\nAda Disini 💫", 65);
+        cache4 = generateTextPoints("Semoga Harimu\nMenyenangkan 🤍", 60);
 
         geometry = new THREE.BufferGeometry();
         positions = new Float32Array(PARTICLE_COUNT * 3);
         targetPositions = new Float32Array(PARTICLE_COUNT * 3);
-        colorsArray = new Float32Array(PARTICLE_COUNT * 3); 
+        colorsArray = new Float32Array(PARTICLE_COUNT * 3);
 
         for(let i=0; i<PARTICLE_COUNT*3; i++) {
-            positions[i] = (Math.random()-0.5) * 100; 
-            targetPositions[i] = positions[i]; 
+            positions[i] = (Math.random()-0.5) * 100;
+            targetPositions[i] = positions[i];
         }
 
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3)); 
-        
+        geometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
+
         material = new THREE.PointsMaterial({
-            size: isMobile ? 0.35 : 0.25,
-            vertexColors: true, 
-            transparent: true, 
-            opacity: 1.0, // OPACITY PENUH BIAR TERANG
-            blending: THREE.AdditiveBlending, 
-            depthWrite: false
+            size: isMobile ? 0.7 : 0.4, // Partikel besar
+            vertexColors: true, transparent: true, opacity: 1.0, 
+            blending: THREE.AdditiveBlending, depthWrite: false
         });
 
         particles = new THREE.Points(geometry, material);
         scene.add(particles);
-        calculateShape('idle'); 
+        calculateShape('idle');
     }
 
-    // --- 4. ANIMASI & WARNA ---
-    function triggerTransitionEffect(effectType) {
-        const pos = geometry.attributes.position.array;
-        for(let i=0; i<PARTICLE_COUNT; i++) {
-            const i3 = i*3;
-            if (effectType === 'explode') {
-                pos[i3] += (Math.random()-0.5) * 40; pos[i3+1] += (Math.random()-0.5) * 40; pos[i3+2] += (Math.random()-0.5) * 40;
-            } 
-            else if (effectType === 'rain') { pos[i3+1] += 40 + Math.random() * 20; }
-            else if (effectType === 'warp') { pos[i3+2] += 50 + Math.random() * 50; }
-            else if (effectType === 'wind') { pos[i3] += 60; }
-            else if (effectType === 'implode') {
-                const angle = Math.random() * Math.PI * 2; const radius = 60;
-                pos[i3] = Math.cos(angle) * radius; pos[i3+1] = Math.sin(angle) * radius;
-            }
-        }
-    }
-
+    // --- PEWARNAAN PELANGI (RAINBOW MODE) ---
     function calculateShape(type) {
         currentShapeType = type;
-        
         document.querySelectorAll('.guide-item').forEach(el => el.classList.remove('active'));
 
-        let label = "STANDBY";
-        if(type === 'idle') label = "PESAN KU";
-        if(type === 'msg1') { label = "HAI DINI"; document.getElementById('g-1').classList.add('active'); }
-        if(type === 'msg2') { label = "KAMU CANTIK"; document.getElementById('g-2').classList.add('active'); }
-        if(type === 'msg3') { label = "TERIMAKASIH"; document.getElementById('g-3').classList.add('active'); }
-        if(type === 'msg4') { label = "RESOLUSI"; document.getElementById('g-4').classList.add('active'); }
-        if(type === 'heart') { label = "😗"; document.getElementById('g-5').classList.add('active'); }
-        
-        document.getElementById('ui-shape').innerText = label;
+        if(type === 'msg1') document.getElementById('g-1').classList.add('active');
+        if(type === 'msg2') document.getElementById('g-2').classList.add('active');
+        if(type === 'msg3') document.getElementById('g-3').classList.add('active');
+        if(type === 'msg4') document.getElementById('g-4').classList.add('active');
+        if(type === 'heart') document.getElementById('g-5').classList.add('active');
 
         for (let i = 0; i < PARTICLE_COUNT; i++) {
             const i3 = i * 3;
-            let x, y, z, hue, saturation, lightness;
+            let x, y, z, hue, sat, light;
             let pt;
 
-            // SETTING WARNA LEBIH TERANG (Lightness = 1.0)
-            saturation = 1.0; lightness = 1.0; // Putih Terang
-
+            // LOGIKA WARNA PELANGI
+            // Hue (H) ditentukan oleh posisi X partikel
+            
             if (type === 'idle') {
                 pt = cacheIdle[i % cacheIdle.length];
-                x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5)*0.5;
-                hue = (x / 50) + 0.5; 
-            }
+                x = pt.x; y = pt.y; z = pt.z + (Math.random()-0.5)*2;
+                hue = (x / 60) + 0.5; // Gradasi Biru-Cyan
+                sat = 0.9; light = 0.7;
+            } 
             else if (type.startsWith('msg')) {
-                let cache = type === 'msg1' ? cache1 : type === 'msg2' ? cache2 : type === 'msg3' ? cache3 : cache4;
+                let cache = type === 'msg1'?cache1 : type==='msg2'?cache2 : type==='msg3'?cache3 : cache4;
                 pt = cache[i % cache.length];
                 x = pt.x; y = pt.y; z = pt.z;
-                hue = (x / 50) + 0.2;
-            }
+                
+                // PELANGI X-AXIS:
+                // x biasanya range -50 sampai 50. Kita normalisasi.
+                hue = (x / 80) + 0.5; // Ini bikin pelangi menyamping
+                sat = 1.0; // Warna Penuh
+                light = 0.6; // Terang
+            } 
             else if (type === 'heart') {
                 const t = Math.random() * Math.PI * 2;
-                let hx = 16 * Math.pow(Math.sin(t), 3);
-                let hy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-                x = hx * 0.9; y = hy * 0.9; z = (Math.random() - 0.5) * 4; 
-                y += 5; 
-                hue = 0.75 + ((y+15)/30) * 0.25; 
-                lightness = 0.7 + Math.random() * 0.3; // Hati tetap ada gradasi tapi terang
-            }
-            else { x=0;y=0;z=0;hue=0;saturation=0;lightness=0; }
+                let hx = 18 * Math.pow(Math.sin(t), 3);
+                let hy = 15 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                x = hx; y = hy + 25; // Hati juga dinaikkan (+25)
+                z = (Math.random()-0.5)*5;
+                hue = 0.95 + Math.random()*0.05; // Merah variasi
+                sat = 1.0; light = 0.6;
+            } 
+            else { x=0;y=0;z=0;hue=0;sat=0;light=0; }
 
             targetPositions[i3] = x;
             targetPositions[i3+1] = y;
             targetPositions[i3+2] = z;
 
-            tempColor.setHSL(hue % 1, saturation, lightness);
+            tempColor.setHSL(hue % 1, sat, light);
             colorsArray[i3] = tempColor.r;
             colorsArray[i3+1] = tempColor.g;
             colorsArray[i3+2] = tempColor.b;
@@ -283,12 +263,9 @@
 
     function animate() {
         requestAnimationFrame(animate);
-        const time = Date.now() * 0.001;
-        particles.position.y = Math.sin(time) * 0.5;
+        const lerpSpeed = 0.1;
 
         const pos = geometry.attributes.position.array;
-        const lerpSpeed = 0.08; 
-
         for(let i=0; i<PARTICLE_COUNT; i++) {
             const i3 = i*3;
             pos[i3] += (targetPositions[i3] * physicsScale - pos[i3]) * lerpSpeed;
@@ -299,58 +276,47 @@
         renderer.render(scene, camera);
     }
 
-    // --- 5. DETEKSI ---
+    // --- SENSOR MODE AGRESIF ---
     function detectGesture(landmarks) {
         const wrist = landmarks[0];
-        const indexMCP = landmarks[5];
-        const palmSize = Math.hypot(indexMCP.x - wrist.x, indexMCP.y - wrist.y);
-
-        function isExtended(tipIdx, pipIdx) {
-            const tipDist = Math.hypot(landmarks[tipIdx].x - wrist.x, landmarks[tipIdx].y - wrist.y);
-            const pipDist = Math.hypot(landmarks[pipIdx].x - wrist.x, landmarks[pipIdx].y - wrist.y);
-            return tipDist > pipDist && tipDist > (palmSize * 1.3);
-        }
+        const isFingerUp = (tipIdx, baseIdx) => landmarks[tipIdx].y < landmarks[baseIdx].y;
 
         const thumbTip = landmarks[4];
-        const thumbDist = Math.hypot(thumbTip.x - indexMCP.x, thumbTip.y - indexMCP.y);
-        const thumbUp = thumbDist > (palmSize * 0.8);
+        const thumbBase = landmarks[2];
+        const thumbUp = thumbTip.x < thumbBase.x; 
 
-        const indexUp  = isExtended(8, 6);
-        const middleUp = isExtended(12, 10);
-        const ringUp   = isExtended(16, 14);
-        const pinkyUp  = isExtended(20, 18);
+        const indexUp = isFingerUp(8, 6);
+        const middleUp = isFingerUp(12, 10);
+        const ringUp = isFingerUp(16, 14);
+        const pinkyUp = isFingerUp(20, 18);
 
         let fingerCount = 0;
-        if (thumbUp) fingerCount++;
         if (indexUp) fingerCount++;
         if (middleUp) fingerCount++;
         if (ringUp) fingerCount++;
         if (pinkyUp) fingerCount++;
+        if (thumbUp || (fingerCount === 4 && thumbTip.y < landmarks[0].y)) fingerCount++;
+        if(fingerCount > 5) fingerCount = 5;
 
-        let icons = "";
-        if(thumbUp) icons += "👍";
-        if(indexUp) icons += "☝️";
-        if(middleUp) icons += "🖕";
-        if(ringUp) icons += "💍";
-        if(pinkyUp) icons += "🤙";
-        document.getElementById('finger-icons').innerText = icons;
+        const statusText = document.getElementById('cam-status');
+        statusText.innerText = "DAPAT: " + fingerCount + " JARI";
+        statusText.classList.add('ok');
 
-        let potentialShape = currentShapeType; 
-
+        let potentialShape = currentShapeType;
         if (fingerCount === 5) potentialShape = 'heart';
         else if (fingerCount === 4) potentialShape = 'msg4';
         else if (fingerCount === 3) potentialShape = 'msg3';
-        else if (fingerCount === 2) potentialShape = 'msg2'; 
-        else if (fingerCount === 1 && indexUp) potentialShape = 'msg1';
-        else if (fingerCount === 0) potentialShape = 'idle'; 
+        else if (fingerCount === 2) potentialShape = 'msg2';
+        else if (fingerCount === 1) potentialShape = 'msg1';
+        else potentialShape = 'idle';
 
         const bar = document.getElementById('stabilizer-bar');
         
         if (potentialShape !== lastDetectedShape) {
             lastDetectedShape = potentialShape;
             frameCounter = 0;
-            bar.style.width = "0%";
-            bar.style.background = "#333";
+            bar.style.width = "10%";
+            bar.style.background = "#ff3333";
         } else {
             if (frameCounter < STABILITY_THRESHOLD) {
                 frameCounter++;
@@ -360,54 +326,45 @@
         }
 
         if (frameCounter >= STABILITY_THRESHOLD) {
-             bar.style.background = "#00ffaa";
+            bar.style.background = "#00ffaa";
             if (displayedShape !== potentialShape) {
                 displayedShape = potentialShape;
-                
-                if (potentialShape === 'msg1') triggerTransitionEffect('rain');
-                else if (potentialShape === 'msg2') triggerTransitionEffect('explode');
-                else if (potentialShape === 'msg3') triggerTransitionEffect('warp');
-                else if (potentialShape === 'msg4') triggerTransitionEffect('wind');
-                else if (potentialShape === 'heart') triggerTransitionEffect('implode');
-                else triggerTransitionEffect('wind');
-
                 calculateShape(potentialShape);
             }
         }
-        
-        const pinchDist = Math.hypot(landmarks[8].x - landmarks[4].x, landmarks[8].y - landmarks[4].y);
-        let physics = (pinchDist < 0.05) ? 0.2 : 1.0; 
-
-        return { physics };
     }
 
     function onResults(results) {
         document.getElementById('loading').style.display = 'none';
+        
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            const lm = results.multiHandLandmarks[0];
-            const state = detectGesture(lm);
-            physicsScale = state.physics;
+            detectGesture(results.multiHandLandmarks[0]);
         } else {
+            document.getElementById('cam-status').innerText = "CARI TANGAN...";
+            document.getElementById('cam-status').classList.remove('ok');
+            document.getElementById('stabilizer-bar').style.width = "0%";
+            
             if(displayedShape !== 'idle') {
-                triggerTransitionEffect('wind');
                 calculateShape('idle');
                 displayedShape = 'idle';
             }
-            document.getElementById('stabilizer-bar').style.width = "0%";
-            document.getElementById('finger-icons').innerText = "☺";
-            physicsScale = 1.0;
         }
     }
 
     const videoElement = document.getElementById('webcam-preview');
     const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-    hands.setOptions({ maxNumHands: 1, modelComplexity: isMobile ? 0 : 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    
+    hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 0, 
+        minDetectionConfidence: 0.3, 
+        minTrackingConfidence: 0.4 
+    });
     hands.onResults(onResults);
 
     const cameraUtils = new Camera(videoElement, {
         onFrame: async () => { await hands.send({image: videoElement}); },
-        width: isMobile ? 480 : 640, 
-        height: isMobile ? 360 : 480,
+        width: 480, height: 360,
         facingMode: 'user'
     });
 
@@ -421,7 +378,6 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         adjustCamera();
     });
-
 </script>
 </body>
 </html>
